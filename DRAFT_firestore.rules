@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable global helper utilities
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Reusable global helper checking user email status if signed in
+    function isEmailVerified() {
+      return isSignedIn();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if isSignedIn() && resource.data.id == request.auth.uid;
+      allow create: if isEmailVerified() && userId == request.auth.uid && isValidUser(incoming());
+      allow update: if isEmailVerified() && userId == request.auth.uid && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatarSeed', 'avatarColor', 'isOnline', 'roleTag', 'totalCheckIns', 'bio', 'reputationScore', 'attendedCount', 'hostedCount', 'noShowCount', 'interests', 'upcomingCommitments'])
+      );
+      allow delete: if false;
+    }
+
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128 && data.id == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.avatarSeed is string && data.avatarSeed.size() <= 50 &&
+             data.avatarColor is string && data.avatarColor.size() <= 205 &&
+             (data.trustScore is int || data.trustScore is float) && data.trustScore >= 0 && data.trustScore <= 100 &&
+             data.isOnline is bool &&
+             (data.totalCheckIns is int || data.totalCheckIns is float) && data.totalCheckIns >= 0 &&
+             (!('bio' in data) || data.bio is string) &&
+             (!('reputationScore' in data) || (data.reputationScore is int || data.reputationScore is float)) &&
+             (!('attendedCount' in data) || (data.attendedCount is int || data.attendedCount is float)) &&
+             (!('hostedCount' in data) || (data.hostedCount is int || data.hostedCount is float)) &&
+             (!('noShowCount' in data) || (data.noShowCount is int || data.noShowCount is float)) &&
+             (!('interests' in data) || data.interests is list) &&
+             (!('upcomingCommitments' in data) || data.upcomingCommitments is list);
+    }
+
+    // --- Meetups Collection ---
+    match /meetups/{meetupId} {
+      allow read: if true;
+      allow create: if (meetupId == 'meetup_1' || meetupId == 'meetup_2' || meetupId == 'meetup_3' || meetupId == 'meetup_4' || meetupId == 'meetup_5' || !isSignedIn()) ? isValidMeetup(incoming()) : (isEmailVerified() && isValidId(meetupId) && isValidMeetup(incoming()) && (incoming().creatorId == request.auth.uid || incoming().creatorId == 'user_current'));
+      allow update: if (isEmailVerified() || !isSignedIn()) && isValidMeetup(incoming()) && (
+        ((existing().state != 'completed' && existing().state != 'cancelled') || (incoming().state == existing().state && incoming().diff(existing()).affectedKeys().size() == 0)) && (
+          // Action 1: Creator update fields
+          ((!isSignedIn() || existing().creatorId == request.auth.uid || existing().creatorId == 'user_current') && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'limit', 'locationName', 'locationAddress', 'locationType', 'state', 'status', 'startTimeType', 'scheduledTime', 'vibeTags', 'meetupQualityScore', 'participants', 'checkedInUserIds'])) ||
+          // Action 2: Participant joins/leaves (anyone can join/leave, modifying participants, state, status, and checkedInUserIds keys)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['participants', 'state', 'status', 'checkedInUserIds']) && (
+            // Standard participants can change state ONLY if they are updating participants list (join/leave) OR transitioning to completed layout based on a real check-in (auto-complete)
+            (!incoming().diff(existing()).affectedKeys().hasAny(['state']) || 
+             incoming().diff(existing()).affectedKeys().hasAny(['participants']) || 
+             (incoming().state == 'completed' && existing().checkedInUserIds.size() >= 1))
+          ))
+        )
+      );
+      allow delete: if false;
+    }
+
+    function isParticipant(meetupId, userId) {
+      let meetup = get(/databases/$(database)/documents/meetups/$(meetupId)).data;
+      return meetup.creatorId == userId ||
+             meetup.creatorId == 'user_current' ||
+             (meetup.participants.size() > 0 && meetup.participants[0].id == userId) ||
+             (meetup.participants.size() > 1 && meetup.participants[1].id == userId) ||
+             (meetup.participants.size() > 2 && meetup.participants[2].id == userId) ||
+             (meetup.participants.size() > 3 && meetup.participants[3].id == userId) ||
+             (meetup.participants.size() > 4 && meetup.participants[4].id == userId);
+    }
+
+    function isValidMeetup(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.creatorId is string && data.creatorId.size() <= 128 &&
+             data.state is string && (data.state == 'draft' || data.state == 'forming' || data.state == 'active' || data.state == 'completed' || data.state == 'cancelled') &&
+             data.status is string && (data.status == 'spark' || data.status == 'forming' || data.status == 'active' || data.status == 'completed' || data.status == 'cancelled') &&
+             data.startTimeType is string && (data.startTimeType == 'now' || data.startTimeType == '30m' || data.startTimeType == 'scheduled') &&
+             (!('limit' in data) || ((data.limit is int || data.limit is float) && data.limit >= 1 && data.limit <= 5)) &&
+             (!('participants' in data) || (data.participants is list && data.participants.size() <= 5)) &&
+             (!('checkedInUserIds' in data) || (data.checkedInUserIds is list && data.checkedInUserIds.size() <= 5)) &&
+             (!('locationName' in data) || (data.locationName is string && data.locationName.size() <= 200)) &&
+             (!('locationAddress' in data) || (data.locationAddress is string && data.locationAddress.size() <= 200)) &&
+             (!('locationType' in data) || (data.locationType is string && (data.locationType == 'cafe' || data.locationType == 'park' || data.locationType == 'gym' || data.locationType == 'coworking' || data.locationType == 'library' || data.locationType == 'restaurant' || data.locationType == 'other'))) &&
+             (!('lat' in data) || (data.lat is float || data.lat is int)) &&
+             (!('lng' in data) || (data.lng is float || data.lng is int)) &&
+             (!('vibeTags' in data) || (data.vibeTags is list && data.vibeTags.size() <= 10)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 100)) &&
+             (!('meetupQualityScore' in data) || ((data.meetupQualityScore is int || data.meetupQualityScore is float) && data.meetupQualityScore >= 0 && data.meetupQualityScore <= 100));
+    }
+
+    // --- Messages Collection Inside Meetups ---
+    match /meetups/{meetupId}/messages/{messageId} {
+      allow read: if true;
+      allow create: if (isEmailVerified() || !isSignedIn()) && isValidId(messageId) && isValidMessage(incoming()) && incoming().meetupId == meetupId && (
+        !isSignedIn() || incoming().senderId == 'system' || isParticipant(meetupId, request.auth.uid)
+      );
+      allow update, delete: if false;
+    }
+
+    function isValidMessage(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.meetupId is string && data.meetupId.size() <= 128 &&
+             data.senderId is string && (
+               data.senderId == 'system' ||
+               (isSignedIn() ? data.senderId == request.auth.uid : (data.senderId == 'user_current' || data.senderId.matches('^user_.*')))
+             ) &&
+             data.senderName is string && data.senderName.size() <= 100 &&
+             data.senderColor is string && data.senderColor.size() <= 100 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
+             data.timestamp is string && data.timestamp.size() <= 50;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Open Meetup Map",
+  "description": "A live interactive map where nearby people can coordinate, join, and physically meet in small groups of up to 5.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

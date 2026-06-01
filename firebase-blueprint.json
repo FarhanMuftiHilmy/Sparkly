@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Explorers in the local perimeters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique user identifier matching request.auth.uid" },
+        "name": { "type": "string", "description": "Display name of the explorer" },
+        "avatarSeed": { "type": "string", "description": "Emoji prefix or seed" },
+        "avatarColor": { "type": "string", "description": "CSS color class mapping" },
+        "trustScore": { "type": "integer", "description": "Accountability / trust rating from 0 to 100" },
+        "isOnline": { "type": "boolean", "description": "Online presence flag" },
+        "roleTag": { "type": "string", "description": "Current status/role descriptor" },
+        "totalCheckIns": { "type": "integer", "description": "Total verified real-world arrivals counted" }
+      },
+      "required": ["id", "name", "avatarSeed", "avatarColor", "trustScore", "isOnline", "totalCheckIns"]
+    },
+    "Meetup": {
+      "title": "Meetup Spark Pin",
+      "description": "A live spark or meetup pin on the openstreetmap radar",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique meetup identifier" },
+        "title": { "type": "string", "description": "Meetup intent title" },
+        "creatorId": { "type": "string", "description": "UID of the user who initiated the spark" },
+        "state": { "type": "string", "enum": ["draft", "forming", "active", "completed", "cancelled"] },
+        "status": { "type": "string", "enum": ["spark", "forming", "active", "completed", "cancelled"] },
+        "startTimeType": { "type": "string", "enum": ["now", "30m", "scheduled"] },
+        "scheduledTime": { "type": "string", "description": "Time representation like 18:00" },
+        "limit": { "type": "integer", "description": "Max limit of people strictly <= 5" },
+        "participants": {
+          "type": "array",
+          "description": "Up to 5 participant user records"
+        },
+        "checkedInUserIds": {
+          "type": "array",
+          "description": "User IDs who successfully physically arrived"
+        },
+        "locationName": { "type": "string" },
+        "locationAddress": { "type": "string" },
+        "locationType": { "type": "string", "enum": ["cafe", "park", "gym", "coworking", "library", "restaurant", "other"] },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "vibeTags": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "meetupQualityScore": { "type": "integer" }
+      },
+      "required": ["id", "title", "creatorId", "state", "status", "startTimeType", "limit", "participants", "checkedInUserIds", "locationName", "locationAddress", "locationType", "lat", "lng", "vibeTags", "createdAt", "meetupQualityScore"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Coordination messages inside the live meetup channel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "meetupId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderColor": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isSystem": { "type": "boolean" }
+      },
+      "required": ["id", "meetupId", "senderId", "senderName", "senderColor", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Explorer public and persistence profile document"
+    },
+    "/meetups/{meetupId}": {
+      "schema": "Meetup",
+      "description": "Live active/draft/forming spark pins representation"
+    },
+    "/meetups/{meetupId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Live logs chatting and arrival announcements channel"
+    }
+  }
+}

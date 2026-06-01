@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Leaflet dark custom popup styling to blend with the terracotta cozy theme */
+.custom-leaflet-popup .leaflet-popup-content-wrapper {
+  background-color: #1E140F !important;
+  color: #F5F5F4 !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7) !important;
+  padding: 4px !important;
+}
+
+.custom-leaflet-popup .leaflet-popup-tip {
+  background-color: #1E140F !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Ensure user-marker doesn't cause overflow or layout breakage */
+.custom-user-marker, .custom-meetup-marker, .custom-temp-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-container {
+  font-family: inherit !important;
+}
