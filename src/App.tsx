@@ -29,7 +29,7 @@ import { db, auth, loginWithGoogle, logoutUser, testConnection, handleFirestoreE
 
 import { Meetup, NearbyDistrict, User, Message, LocationType, StartTimeType, MeetupStatus } from './types';
 import { MOCK_USERS, SUPPORTED_DISTRICTS, SIMULATED_CHAT_REPLIES } from './data';
-import { generateInitialMeetups, calculateDistance, formatDistance, isMeetupReachable, hasMeetupStartTimePassed, isMeetupEndTimePassed } from './utils';
+import { generateInitialMeetups, calculateDistance, formatDistance, isMeetupReachable, hasMeetupStartTimePassed, isMeetupEndTimePassed, formatDateTime } from './utils';
 
 import MapControl from './components/MapControl';
 import CreateMeetupModal from './components/CreateMeetupModal';
@@ -1414,10 +1414,15 @@ export default function App() {
 
                       {/* Bottom details */}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 pl-1">
-                        <div className="flex gap-1">
-                          {meet.vibeTags.slice(0, 2).map((tag, i) => (
-                            <span key={i} className="text-[8.5px] text-slate-400">#{tag}</span>
-                          ))}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9px] text-slate-500 font-mono">
+                            {formatDateTime(meet.startTime)} - {formatDateTime(meet.endTime)}
+                          </span>
+                          <div className="flex gap-1">
+                            {meet.vibeTags.slice(0, 2).map((tag, i) => (
+                              <span key={i} className="text-[8.5px] text-slate-400">#{tag}</span>
+                            ))}
+                          </div>
                         </div>
 
                         {isCommitted && (

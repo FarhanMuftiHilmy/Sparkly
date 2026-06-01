@@ -7,6 +7,19 @@ import { Meetup, MeetupStatus, User, LocationType, StartTimeType } from './types
 import { MOCK_USERS } from './data';
 
 /**
+ * Format date time
+ */
+export function formatDateTime(isoString?: string): string {
+  if (!isoString) return 'TBD';
+  return new Date(isoString).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
  * Calculates the Haversine distance in kilometers between two points
  */
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

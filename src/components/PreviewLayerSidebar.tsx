@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Users, MapPin, Tag, Shield, Calendar, AlertCircle, ArrowRight, Zap, CheckCircle2, Lock } from 'lucide-react';
 import { Meetup, User } from '../types';
-import { formatDistance } from '../utils';
+import { formatDistance, formatDateTime } from '../utils';
 
 interface PreviewLayerSidebarProps {
   meetup: Meetup;
@@ -33,16 +33,6 @@ export default function PreviewLayerSidebar({
 }: PreviewLayerSidebarProps) {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReasonText, setCancelReasonText] = useState('');
-
-  const formatDateTime = (isoString?: string) => {
-    if (!isoString) return 'TBD';
-    return new Date(isoString).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   const isFull = meetup.participants.length >= meetup.limit;
   const isWaitlisted = waitlistedIds.includes(meetup.id);
