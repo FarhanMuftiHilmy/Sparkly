@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Users, MapPin, Tag, Shield, Calendar, AlertCircle, ArrowRight, Zap, CheckCircle2, Lock } from 'lucide-react';
+import { Users, MapPin, Tag, Shield, Calendar, AlertCircle, ArrowRight, Zap, CheckCircle2, Lock, Compass } from 'lucide-react';
 import { Meetup, User } from '../types';
 import { formatDistance, formatDateTime } from '../utils';
 
@@ -127,10 +127,34 @@ export default function PreviewLayerSidebar({
           {meetup.title}
         </h3>
         
-        <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-2">
-          <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-          <span className="font-sans line-clamp-1">{meetup.locationName}</span>
-        </p>
+        <div id="preview-directions-container" className="flex items-start justify-between gap-3 mt-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11.5px] text-slate-200 font-bold flex items-start gap-1.5 leading-tight">
+              <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <span className="font-sans line-clamp-2">{meetup.locationName}</span>
+            </p>
+            {meetup.locationAddress && (
+              <p className="text-[9.5px] text-slate-400 font-mono pl-5 mt-1 leading-normal break-words">
+                {meetup.locationAddress}
+              </p>
+            )}
+            <p className="text-[8.5px] text-zinc-500 font-mono pl-5 mt-0.5 select-all">
+              {meetup.lat.toFixed(6)}, {meetup.lng.toFixed(6)}
+            </p>
+          </div>
+
+          <a
+            id="btn-sidebar-get-directions"
+            href={`https://www.google.com/maps/dir/?api=1&destination=${meetup.lat},${meetup.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-[10px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/20 hover:border-amber-500/40 px-2.5 py-1.5 rounded-lg font-mono font-black transition-all shrink-0 active:scale-95 shadow-sm"
+            title="Open in Google Maps with Navigation set to spot"
+          >
+            <Compass className="w-3.5 h-3.5" />
+            Directions
+          </a>
+        </div>
       </div>
 
       {/* Meetup Information Signals */}
@@ -138,11 +162,11 @@ export default function PreviewLayerSidebar({
         
         {/* Statistics Ratio Bar */}
         <div>
-          <div className="flex justify-between items-center text-[10px] mb-1">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center justify-between text-[10px] mb-1.5">
             <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-amber-400" /> Space Reserved
+              <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Space Reserved
             </span>
-            <span className="font-mono font-bold text-slate-200">
+            <span className="font-mono font-bold text-slate-200 text-left sm:text-right">
               {meetup.participants.length} / {meetup.limit} ({isFull ? 'FULLY COMMUTED' : 'Slots Open'})
             </span>
           </div>
@@ -186,14 +210,16 @@ export default function PreviewLayerSidebar({
         </div>
 
         {/* Timing Urgency */}
-        <div className="border-t border-b border-white/10 py-3 text-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400 font-medium select-none">Planned Timing:</span>
-            <span className="font-mono font-bold text-slate-200 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              {meetup.startTimeType === 'now' ? 'RIGHT NOW! (Join prompt)' :
-               meetup.startTimeType === '30m' ? 'In 30 Minutes' :
-               `${formatDateTime(meetup.scheduledStartDateTime)} - ${formatDateTime(meetup.scheduledEndDateTime)}`}
+        <div className="border-t border-b border-white/10 py-3 text-xs space-y-1">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-slate-400 font-medium select-none text-[10px] uppercase tracking-wider shrink-0">Planned Timing:</span>
+            <span className="font-mono font-bold text-slate-200 bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5 text-[10px] w-full shrink-0">
+              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+              <span className="leading-snug break-words">
+                {meetup.startTimeType === 'now' ? 'RIGHT NOW! (Join prompt)' :
+                 meetup.startTimeType === '30m' ? 'In 30 Minutes' :
+                 `${formatDateTime(meetup.scheduledStartDateTime)} - ${formatDateTime(meetup.scheduledEndDateTime)}`}
+              </span>
             </span>
           </div>
         </div>

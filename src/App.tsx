@@ -917,6 +917,8 @@ export default function App() {
     locationType: LocationType;
     startTimeType: StartTimeType;
     scheduledTime?: string;
+    startTime?: string;
+    endTime?: string;
     limit: number;
     vibeTags: string[];
     lat: number;
@@ -1025,6 +1027,9 @@ export default function App() {
 
   // Filter listings based on interactive filters (Distance & Timing Rules!)
   const filteredMeetups = meetups.filter((meetup) => {
+    // Exclude completed or cancelled sparks
+    if (meetup.status === 'completed' || meetup.status === 'cancelled') return false;
+
     // Category vibe filter
     if (categoryFilter !== 'All') {
       const matchCat = meetup.locationType === categoryFilter.toLowerCase() ||
@@ -1178,7 +1183,7 @@ export default function App() {
       </header>
 
       {/* MOBILE BOTTOM TABS COMPONENT PANEL */}
-      <div className="md:hidden grid grid-cols-3 border-b border-stone-800 bg-[#16100D] py-1 sticky top-[69px] z-30 text-xs font-mono text-slate-400">
+      <div className="lg:hidden grid grid-cols-3 border-b border-stone-800 bg-[#16100D] py-1 sticky top-[69px] z-30 text-xs font-mono text-slate-400">
         <button
           onClick={() => setMobileActiveTab('map')}
           className={`py-2 text-center flex flex-col items-center gap-1 border-b-2 transition ${
@@ -1212,10 +1217,10 @@ export default function App() {
       </div>
 
       {/* PRIMARY CENTRAL GRID WORKSPACE FRAME */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 overflow-hidden">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 overflow-hidden">
         
         {/* ================= COLUMN 1 (4 cols): User Dashboard + Available meetups list ================= */}
-        <section className={`md:col-span-4 space-y-4 flex flex-col h-full ${mobileActiveTab === 'feed' ? 'block' : 'hidden md:flex'}`}>
+        <section className={`lg:col-span-4 space-y-4 flex flex-col h-full ${mobileActiveTab === 'feed' ? 'block' : 'hidden lg:flex'}`}>
           
           {/* "Quick Areas" Dropdown Panel */}
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center z-10">
@@ -1414,8 +1419,8 @@ export default function App() {
 
                       {/* Bottom details */}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5 pl-1">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[9px] text-slate-500 font-mono">
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="text-[9px] text-slate-500 font-mono leading-normal break-words">
                             {formatDateTime(meet.startTime)} - {formatDateTime(meet.endTime)}
                           </span>
                           <div className="flex gap-1">
@@ -1445,7 +1450,7 @@ export default function App() {
         </section>
 
         {/* ================= COLUMN 2 (5 cols): The Map Viewport Panel ================= */}
-        <section className={isMapFullscreen ? 'fixed inset-0 z-[99999] w-screen h-screen m-0 p-0 overflow-hidden bg-[#120D0A]' : `md:col-span-5 h-[480px] md:h-full flex flex-col select-none ${mobileActiveTab === 'map' ? 'block' : 'hidden md:flex'}`}>
+        <section className={isMapFullscreen ? 'fixed inset-0 z-[99999] w-screen h-screen m-0 p-0 overflow-hidden bg-[#120D0A]' : `lg:col-span-5 h-[480px] lg:h-full flex flex-col select-none ${mobileActiveTab === 'map' ? 'block' : 'hidden lg:flex'}`}>
           <div className={isMapFullscreen ? 'w-full h-full border-none rounded-none overflow-hidden' : 'flex-1 flex flex-col h-full bg-white/5 rounded-2xl overflow-hidden shadow-inner border border-white/10 z-10'}>
             <MapControl
               meetups={meetups}
@@ -1472,7 +1477,7 @@ export default function App() {
         </section>
 
         {/* ================= COLUMN 3 (3 cols): Preview Sidebar OR Active Coordination Chat ================= */}
-        <section className={`md:col-span-3 space-y-4 flex flex-col h-full ${mobileActiveTab === 'chat' ? 'block' : 'hidden md:flex'}`}>
+        <section className={`lg:col-span-3 space-y-4 flex flex-col h-full ${mobileActiveTab === 'chat' ? 'block' : 'hidden lg:flex'}`}>
           
           {/* If the current selected meetup is also the user's active/joined meetup, display chat coordination room */}
           {selectedMeetup && activeMeetupId === selectedMeetup.id ? (
@@ -1552,6 +1557,7 @@ export default function App() {
         currentUser={currentUser}
         onUpdateProfile={handleUpdateProfile}
         upcomingMeetups={meetups.filter(m => m.participants.some(p => p.id === currentUser.id) && m.status !== 'completed' && m.status !== 'cancelled')}
+        sparkHistory={meetups.filter(m => m.participants.some(p => p.id === currentUser.id) && (m.status === 'completed' || m.status === 'cancelled'))}
         onSelectMeetup={(id) => {
           setSelectedMeetupId(id);
           setMobileActiveTab('chat');

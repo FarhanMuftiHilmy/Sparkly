@@ -328,8 +328,47 @@ export default function MapControl({
       }).addTo(circlesGroup);
     }
 
+    // 3b. Draw geofence radius circles around the selected meetup (if one is selected and is active/forming)
+    if (selectedMeetupId) {
+      const selectedMeetup = meetups.find(m => m.id === selectedMeetupId);
+      if (selectedMeetup) {
+        // Chat Lock Radius (500m)
+        L.circle([selectedMeetup.lat, selectedMeetup.lng], {
+          radius: 500,
+          color: '#c084fc', // Light purple
+          fillColor: '#a855f7', // Purple
+          fillOpacity: 0.05,
+          weight: 1.2,
+          dashArray: '6, 4'
+        })
+        .bindTooltip('<span class="font-mono text-[9px] text-purple-300">💬 Chat Access Zone (500m Limit)</span>', { 
+          permanent: false, 
+          direction: 'top', 
+          className: 'custom-map-tooltip' 
+        })
+        .addTo(circlesGroup);
+
+        // Check-In Radius (200m)
+        L.circle([selectedMeetup.lat, selectedMeetup.lng], {
+          radius: 200,
+          color: '#fbbf24', // Light amber/gold
+          fillColor: '#f59e0b', // Amber/Gold
+          fillOpacity: 0.1,
+          weight: 1.8,
+          dashArray: '2, 3'
+        })
+        .bindTooltip('<span class="font-mono text-[9px] text-amber-300">📍 Check-In Zone (200m Limit)</span>', { 
+          permanent: false, 
+          direction: 'bottom', 
+          className: 'custom-map-tooltip' 
+        })
+        .addTo(circlesGroup);
+      }
+    }
+
     // 4. Plot Meetup pins (Grouped to resolve spatial overlapping with elegant dispersion offsets)
     const filteredMeetups = meetups.filter((m) => {
+      if (m.status === 'completed' || m.status === 'cancelled') return false;
       if (activeMeetupTimerFilter === 'all') return true;
       return m.startTimeType === activeMeetupTimerFilter;
     });
@@ -500,9 +539,10 @@ export default function MapControl({
     // 1. Gather Matching Local Meetups
     const matchingMeetups: SuggestionItem[] = meetups
       .filter(m => 
-        m.title.toLowerCase().includes(query) ||
+        m.status !== 'completed' && m.status !== 'cancelled' &&
+        (m.title.toLowerCase().includes(query) ||
         m.locationName.toLowerCase().includes(query) ||
-        m.locationAddress.toLowerCase().includes(query)
+        m.locationAddress.toLowerCase().includes(query))
       )
       .slice(0, 3)
       .map(m => ({
@@ -628,9 +668,10 @@ export default function MapControl({
     // 1. Check local meetups
     const foundMeetup = meetups.find(
       (m) =>
-        m.title.toLowerCase().includes(query) ||
+        m.status !== 'completed' && m.status !== 'cancelled' &&
+        (m.title.toLowerCase().includes(query) ||
         m.locationName.toLowerCase().includes(query) ||
-        m.locationAddress.toLowerCase().includes(query)
+        m.locationAddress.toLowerCase().includes(query))
     );
 
     if (foundMeetup) {

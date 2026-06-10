@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, MapPin, CheckCircle, ShieldAlert, Users, Compass, Zap, Smile } from 'lucide-react';
 import { Meetup, Message, User } from '../types';
 import { QUICK_CHAT_SUGGESTIONS, SIMULATED_CHAT_REPLIES } from '../data';
+import { formatDateTime } from '../utils';
 
 interface ActiveMeetupChatProps {
   meetup: Meetup;
@@ -97,9 +98,9 @@ export default function ActiveMeetupChat({
       
       {/* 1. Header with Check-In action */}
       <div className="p-4 bg-white/5 border-b border-white/10 flex-shrink-0">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
+            <Compass className="w-5 h-5 text-amber-400 animate-spin shrink-0" style={{ animationDuration: '6s' }} />
             <div>
               <h4 className="text-xs font-bold text-slate-100 uppercase tracking-widest leading-none flex items-center gap-1.5">
                 📍 Logistical Coordination Chat
@@ -107,13 +108,13 @@ export default function ActiveMeetupChat({
               <p className="text-[10px] text-slate-400 mt-1 font-sans">
                 Active Group: <span className="text-amber-300 font-semibold">{meetup.title}</span>
               </p>
-              <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                {meetup.startDateTime} to {meetup.endDateTime}
+              <p className="text-[10px] text-slate-500 mt-1 font-mono leading-normal">
+                {formatDateTime(meetup.scheduledStartDateTime || meetup.startTime)} to {formatDateTime(meetup.scheduledEndDateTime || meetup.endTime)}
               </p>
             </div>
           </div>
 
-          <div className="text-right shrink-0">
+          <div className="text-left sm:text-right shrink-0">
             <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-300 px-2 py-1 rounded font-mono font-bold">
               {totalArrivedCount}/{meetup.participants.length} Arrived
             </span>

@@ -10,6 +10,7 @@ import {
   MapPin, User as UserIcon, Clock, AlertTriangle, Sparkles, Zap
 } from 'lucide-react';
 import { User, Meetup } from '../types';
+import { formatDateTime } from '../utils';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface UserProfileModalProps {
   currentUser: User;
   onUpdateProfile: (updated: User) => void;
   upcomingMeetups: Meetup[];
+  sparkHistory: Meetup[];
   onSelectMeetup: (id: string) => void;
 }
 
@@ -54,6 +56,7 @@ export default function UserProfileModal({
   currentUser,
   onUpdateProfile,
   upcomingMeetups,
+  sparkHistory,
   onSelectMeetup
 }: UserProfileModalProps) {
   
@@ -402,6 +405,56 @@ export default function UserProfileModal({
                   {upcomingMeetups.length === 0 && (
                     <div className="text-center py-4 bg-white/3 border border-white/5 rounded-xl text-[10px] text-zinc-500 italic">
                       Zero active commitments. Drop a spark pin on the map to start co-coordinating!
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Spark History (Past/Archived Moments) */}
+              <div>
+                <label className="text-[9px] text-zinc-400 font-black uppercase tracking-wider block mb-1.5 flex justify-between">
+                  <span>Spark History ({sparkHistory.length})</span>
+                  <span className="text-zinc-500 select-none">Completed / Cancelled</span>
+                </label>
+                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                  {sparkHistory.map(meetup => {
+                    const isCreator = meetup.creatorId === currentUser.id;
+                    const isCompleted = meetup.status === 'completed';
+                    return (
+                      <div
+                        key={meetup.id}
+                        onClick={() => {
+                          onSelectMeetup(meetup.id);
+                          onClose();
+                        }}
+                        className="flex items-center justify-between p-2 bg-white/5 border border-white/5 hover:border-amber-500/30 hover:bg-white/10 rounded-lg text-[11px] cursor-pointer transition-all"
+                      >
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs shrink-0">{meetup.locationType === 'cafe' ? '☕' : meetup.locationType === 'park' ? '🌳' : '📍'}</span>
+                            <span className="text-slate-200 font-bold truncate max-w-[130px] sm:max-w-xs">{meetup.title}</span>
+                            {isCreator && (
+                              <span className="text-[8px] bg-indigo-500/10 text-indigo-300 border border-indigo-400/20 px-1 py-0.2 rounded font-mono font-black scale-90">HOST</span>
+                            )}
+                          </div>
+                          <div className="text-[8.5px] text-slate-400/70 font-mono truncate pl-5">
+                            {formatDateTime(meetup.scheduledStartDateTime || meetup.startTime)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-zinc-500 font-mono text-[9px] hidden sm:inline">{meetup.locationName}</span>
+                          <span className={`text-[8.5px] font-mono px-1 py-0.2 rounded uppercase ${
+                            isCompleted ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-stone-500/10 text-stone-400 border border-stone-500/20'
+                          }`}>
+                            {meetup.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {sparkHistory.length === 0 && (
+                    <div className="text-center py-4 bg-white/3 border border-white/5 rounded-xl text-[10px] text-zinc-500 italic">
+                      No historical sparks. Complete an active spark coordination to record history!
                     </div>
                   )}
                 </div>
