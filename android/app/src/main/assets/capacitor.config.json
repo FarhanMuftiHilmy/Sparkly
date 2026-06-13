@@ -1,0 +1,8 @@
+{
+	"appId": "com.openmeetupmap.app",
+	"appName": "Open Meetup Map",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	}
+}
