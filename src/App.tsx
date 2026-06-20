@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 // Firebase core & database client APIs
 import { collection, onSnapshot, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { db, auth, loginWithGoogle, logoutUser, testConnection, handleFirestoreError, OperationType } from './lib/firebase';
+import { db, auth, loginWithGoogle, logoutUser, testConnection, handleRedirectResult, handleFirestoreError, OperationType } from './lib/firebase';
 
 import { Meetup, NearbyDistrict, User, Message, LocationType, StartTimeType, MeetupStatus } from './types';
 import { MOCK_USERS, SUPPORTED_DISTRICTS, SIMULATED_CHAT_REPLIES } from './data';
@@ -108,6 +108,7 @@ export default function App() {
   // A. Initial connection test
   useEffect(() => {
     testConnection();
+    handleRedirectResult();
   }, []);
 
   // B. Firebase Auth State Listener & Profile sync
