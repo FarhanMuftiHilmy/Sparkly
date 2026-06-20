@@ -4,8 +4,10 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithCredential, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -74,8 +76,21 @@ export async function testConnection() {
 
 export async function loginWithGoogle() {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    if (Capacitor.isNativePlatform()) {
+      // Use Capawesome native Firebase Authentication for Google Sign-In
+      const result = await FirebaseAuthentication.signInWithGoogle({});
+      if (result.credential?.idToken) {
+        const credential = GoogleAuthProvider.credential(result.credential.idToken);
+        const userCredential = await signInWithCredential(auth, credential);
+        return userCredential.user;
+      } else {
+        throw new Error("No ID Token offered by native Google Sign-In helper.");
+      }
+    } else {
+      // Fallback for browser / AI Studio Web preview
+      const result = await signInWithPopup(auth, googleProvider);
+      return result.user;
+    }
   } catch (error) {
     console.error("Google authentication error:", error);
     throw error;
@@ -84,6 +99,9 @@ export async function loginWithGoogle() {
 
 export async function logoutUser() {
   try {
+    if (Capacitor.isNativePlatform()) {
+      await FirebaseAuthentication.signOut();
+    }
     await signOut(auth);
   } catch (error) {
     console.error("Signout error:", error);
