@@ -1,6 +1,38 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/* Leaflet Tile & Grid Fixes for Tailwind CSS v4 */
+.leaflet-container img.leaflet-tile,
+.leaflet-tile-container img,
+.leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+  width: 256px !important;
+  height: 256px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.leaflet-container {
+  font-family: inherit !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: #1a1512 !important;
+}
+
+.leaflet-tile-pane {
+  background-color: #1a1512 !important;
+}
+
+/* High-detail dark tile filter preserving all POIs, hotels, and venues */
+.leaflet-tile-pane.dark-detail-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%);
+}
+
 /* Leaflet dark custom popup styling to blend with the terracotta cozy theme */
 .custom-leaflet-popup .leaflet-popup-content-wrapper {
   background-color: #1E140F !important;

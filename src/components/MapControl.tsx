@@ -33,10 +33,12 @@ interface SuggestionItem {
 }
 
 const MAP_THEMES = [
-  { id: 'dark' as const, name: 'Dark Matter', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
-  { id: 'light' as const, name: 'Positron Light', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
-  { id: 'voyager' as const, name: 'Voyager Trails', url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
-  { id: 'standard' as const, name: 'Standard Roads', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }
+  { id: 'standard' as const, name: 'Standard Roads (Full POI)', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  { id: 'dark_detail' as const, name: 'Detailed Dark (Full POI)', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  { id: 'hot' as const, name: 'Humanitarian & Venues', url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  { id: 'dark' as const, name: 'Dark Matter (Minimal)', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
+  { id: 'light' as const, name: 'Positron Light (Minimal)', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
+  { id: 'voyager' as const, name: 'Voyager Trails', url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' }
 ];
 
 export default function MapControl({
@@ -77,7 +79,7 @@ export default function MapControl({
   const [localFullscreen, setLocalFullscreen] = useState(false);
   const isFullscreen = propIsFullscreen !== undefined ? propIsFullscreen : localFullscreen;
 
-  const [activeTheme, setActiveTheme] = useState<'dark' | 'light' | 'voyager' | 'standard'>('dark');
+  const [activeTheme, setActiveTheme] = useState<'standard' | 'dark_detail' | 'hot' | 'dark' | 'light' | 'voyager'>('standard');
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const hasInitializedToUserLocation = useRef(false);
@@ -140,8 +142,9 @@ export default function MapControl({
       },
       (error) => {
         setIsLocating(false);
-        console.error("Geolocation error:", error);
-        setSearchNotification(`GPS Error: ${error.message}`);
+        const errorMsg = error?.message || (error?.code === 1 ? 'Permission denied' : 'GPS signal unavailable');
+        console.warn("Geolocation fallback active:", errorMsg);
+        setSearchNotification(`GPS Status: ${errorMsg}. Using District Center.`);
       },
       {
         enableHighAccuracy: true,
@@ -168,10 +171,37 @@ export default function MapControl({
     const tileL = L.tileLayer(initialTheme.url, {
       attribution: initialTheme.attribution,
       subdomains: 'abcd',
-      maxZoom: 20
+      maxNativeZoom: 19,
+      maxZoom: 20,
+      tileSize: 256,
+      keepBuffer: 8,
+      updateWhenIdle: false,
+      updateWhenZooming: true,
+      crossOrigin: true,
     }).addTo(map);
 
+    tileL.on('tileerror', (errorTile) => {
+      // Fallback if a CDN tile server drops a tile request
+      const tileImg = errorTile.tile as HTMLImageElement;
+      if (tileImg && !tileImg.dataset.retried) {
+        tileImg.dataset.retried = 'true';
+        // Retry with standard OSM tile fallback if CARTO endpoint fails for a tile
+        const coords = errorTile.coords;
+        tileImg.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+      }
+    });
+
     tileLayerRef.current = tileL;
+
+    // Attach ResizeObserver to container to recalculate dimensions whenever visible size changes
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
+    // Staggered size invalidations to ensure initial flexbox container sizing is captured
+    const timer1 = setTimeout(() => map.invalidateSize(), 150);
+    const timer2 = setTimeout(() => map.invalidateSize(), 500);
 
     // Setup map groups
     const circlesLayer = L.layerGroup().addTo(map);
@@ -207,6 +237,9 @@ export default function MapControl({
     });
 
     return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       map.remove();
       mapRef.current = null;
     };
@@ -256,10 +289,20 @@ export default function MapControl({
 
   // Sync the map tile layer when activeTheme changes
   useEffect(() => {
-    if (tileLayerRef.current) {
+    if (mapRef.current && tileLayerRef.current) {
       const selectedTheme = MAP_THEMES.find((t) => t.id === activeTheme);
       if (selectedTheme) {
         tileLayerRef.current.setUrl(selectedTheme.url);
+      }
+
+      // Toggle high-detail dark filter class on tile pane
+      const tilePane = mapRef.current.getPane('tilePane');
+      if (tilePane) {
+        if (activeTheme === 'dark_detail') {
+          tilePane.classList.add('dark-detail-tiles');
+        } else {
+          tilePane.classList.remove('dark-detail-tiles');
+        }
       }
     }
   }, [activeTheme]);
@@ -276,14 +319,21 @@ export default function MapControl({
     markersGroup.clearLayers();
     circlesGroup.clearLayers();
 
-    // 2. Draw user current location glowing marker
+    // 2. Draw user current location glowing marker with custom compass beacon design
     const userHtml = `
       <div class="relative flex items-center justify-center">
-        <!-- Glow halo -->
-        <div class="w-8 h-8 absolute rounded-full bg-sky-500/25 animate-ping opacity-70"></div>
-        <!-- Outer circle -->
-        <div class="w-6 h-6 rounded-full bg-sky-500/20 border border-sky-400/80 flex items-center justify-center shadow-lg shadow-sky-500/10">
-          <div class="w-2.5 h-2.5 rounded-full bg-sky-450 border border-white/50"></div>
+        <!-- Outer glowing radar pulse rings -->
+        <div class="w-12 h-12 absolute rounded-full bg-emerald-500/25 animate-ping opacity-75"></div>
+        <div class="w-10 h-10 absolute rounded-full bg-emerald-500/15 border border-emerald-400/40 animate-pulse"></div>
+        <!-- Center beacon pill -->
+        <div class="relative w-8 h-8 rounded-full bg-stone-950 border-2 border-emerald-400 shadow-xl shadow-emerald-500/40 flex items-center justify-center text-emerald-400">
+          <svg class="w-4 h-4 text-emerald-400 transform -rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+          <!-- Live pulse dot -->
+          <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-stone-950 flex items-center justify-center">
+            <span class="w-1 h-1 rounded-full bg-stone-950"></span>
+          </span>
         </div>
       </div>
     `;
@@ -291,17 +341,17 @@ export default function MapControl({
     const userIcon = L.divIcon({
       html: userHtml,
       className: 'custom-user-marker',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     });
 
     L.marker([userCoords.lat, userCoords.lng], { icon: userIcon })
       .bindPopup(`
         <div class="p-2 font-sans text-stone-100 text-xs text-center">
-          <span class="text-[9px] font-mono uppercase tracking-wider text-sky-400 font-bold block mb-1">GPS VERIFIED SIGNAL</span>
-          <b class="text-stone-200">✨ You are here</b>
+          <span class="text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold block mb-1">📍 YOUR CURRENT LOCATION</span>
+          <b class="text-stone-100 text-sm">You are here</b>
           <p class="text-[10px] text-stone-400 mt-1 leading-normal">
-            Secure offline coordinates system within Jaksel perimeter.
+            GPS Signal active • Double-click anywhere on the map to set a new meetup pin.
           </p>
         </div>
       `, { className: 'custom-leaflet-popup', closeButton: false })
